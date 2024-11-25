@@ -15,6 +15,5 @@ resource law 'Microsoft.OperationalInsights/workspaces@2023-09-01' = {
   })
 }
 
-
 output clientId string = law.properties.customerId
 output clientSecret string = law.listKeys().primarySharedKey

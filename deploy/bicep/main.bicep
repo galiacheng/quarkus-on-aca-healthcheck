@@ -1,38 +1,48 @@
 param location string = resourceGroup().location
 param name string = 'quarkus-healthcheck'
 
-param containerImage string
+param acrImage string
 param containerPort int = 8080
 param containerRegistry string
 
 module law 'log-analytics.bicep' = {
-	name: 'log-analytics-workspace'
-	params: {
-      location: location
-      name: 'law-${name}'
-	}
+  name: 'log-analytics-workspace'
+  params: {
+    location: location
+    name: 'law-${name}'
+  }
 }
 
-module containerAppEnvironment 'aca-environment.bicep' = {
+module containerAppEnvironment 'aca-env.bicep' = {
   name: 'aca-env-${name}'
   params: {
     name: 'env-${name}'
     location: location
-    lawClientId:law.outputs.clientId
+    lawClientId: law.outputs.clientId
     lawClientSecret: law.outputs.clientSecret
   }
 }
 
-module containerApp 'aca.bicep' = {
-  name: 'api'
+module uami 'uami.bicep' = {
+  name: 'uami'
   params: {
-    name: 'api'
+    location: location
+    name: 'uami-${name}'
+    acrName: containerRegistry
+  }
+}
+
+module containerApp 'aca.bicep' = {
+  name: 'acr-${name}'
+  params: {
+    name: 'acr-${name}'
     location: location
     containerAppEnvironmentId: containerAppEnvironment.outputs.id
-    containerImage: containerImage
+    acrLoginServer: uami.outputs.acrLoginServer
+    acrImage: acrImage
     containerPort: containerPort
-    containerRegistry: containerRegistry
     useExternalIngress: true
+    uamiId: uami.outputs.uamiId
   }
 }
 

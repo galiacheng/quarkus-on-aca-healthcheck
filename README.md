@@ -6,10 +6,7 @@ Env variables:
 export UNIQUE_VALUE=haiche1125
 export RESOURCE_GROUP="${UNIQUE_VALUE}-aca-quarkus-rg"
 export LOCATION="australiaeast"
-export ENVIRONMENT="${UNIQUE_VALUE}-env-dev-test-quarkus-health"
-export CONTAINER_APP_NAME="${UNIQUE_VALUE}-quarkus-health"
 export REGISTRY_NAME="${UNIQUE_VALUE}acrquarkusapp"
-export UAMI_NAME="${UNIQUE_VALUE}-uami-with-acr-pull"
 ```
 
 1. Create ACR
@@ -26,12 +23,6 @@ export UAMI_NAME="${UNIQUE_VALUE}-uami-with-acr-pull"
    ```bash
    export LOGIN_SERVER=$(az acr show --name $REGISTRY_NAME --query 'loginServer' --output tsv)
    echo $LOGIN_SERVER
-   ```
-
-1. Create container environment
-
-   ```bash
-   az containerapp env create --name $ENVIRONMENT --resource-group $RESOURCE_GROUP --location $LOCATION
    ```
 
 1. Build image
@@ -51,9 +42,22 @@ export UAMI_NAME="${UNIQUE_VALUE}-uami-with-acr-pull"
    docker push ${QUARKUS_IMAGE_TAG}
    ```
 
-1. Create a user assigned managed identity and grant AcrPull permission to the identity.
+1. Deploy Quarkus app to ACR
+
+   ## AZ CLI
+
+   Create container environment
 
    ```bash
+   export ENVIRONMENT="${UNIQUE_VALUE}-env-dev-test-quarkus-health"   
+
+   az containerapp env create --name $ENVIRONMENT --resource-group $RESOURCE_GROUP --location $LOCATION
+   ```
+
+   Create a user assigned managed identity and grant AcrPull permission to the identity.
+
+   ```bash
+   export UAMI_NAME="${UNIQUE_VALUE}-uami-with-acr-pull"
    az identity create --name ${UAMI_NAME} --resource-group ${RESOURCE_GROUP}
    ```
 
@@ -65,20 +69,21 @@ export UAMI_NAME="${UNIQUE_VALUE}-uami-with-acr-pull"
    Assign the `AcrPull` Role.
 
    ```bash
+   export CONTAINER_APP_NAME="${UNIQUE_VALUE}-quarkus-health"
+   
    az role assignment create \
     --assignee ${UAMI_CLIENT_ID} \
     --role "AcrPull" \
     --scope $(az acr show --name ${REGISTRY_NAME} --query id --output tsv)
    ```
 
-1. Deploy Quarkus app to ACR
-
-   ## AZ CLI
+   Generate Yaml configurtion.
 
    ```bash
    cd deploy/yaml
    bash gen-yaml-configuration.sh
    ```
+   Create container app.
 
    ```bash
    az containerapp create \
@@ -91,6 +96,11 @@ export UAMI_NAME="${UNIQUE_VALUE}-uami-with-acr-pull"
    ## Bicep
 
    ```bash
+   cd deploy/bicep
+   ```
+
+   ```bash
+   az deployment group create -g ${RESOURCE_GROUP} -f main.bicep -p containerImage=${QUARKUS_IMAGE_TAG} containerRegistry=${REGISTRY_NAME}
    ```
 
 1. Check health probe
