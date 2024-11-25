@@ -1,0 +1,33 @@
+properties:
+  configuration:
+    registries:
+      - server: acrquarkusapp1125.azurecr.io
+        identity: SystemAssigned
+    ingress:
+      external: true
+      allowInsecure: false
+      targetPort: 8080
+  template:
+    revisionSuffix: quarkus-health-1125
+    containers:
+      - name: quarkus-health-1125
+        image: acrquarkusapp1125.azurecr.io/quarkus-aca:1.0
+        probes:
+          - type: Liveness
+            httpGet:
+              path: /q/health/live
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          - type: Readiness
+            httpGet:
+              path: /q/health/ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 3
+          - type: Startup
+            httpGet:
+              path: /q/health/started
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 3
