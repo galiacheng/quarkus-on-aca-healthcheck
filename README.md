@@ -3,12 +3,13 @@ Main steps:
 Env variables:
 
 ```bash
-export RESOURCE_GROUP="aca-quarkus-rg"
+export UNIQUE_VALUE=haiche1125
+export RESOURCE_GROUP="${UNIQUE_VALUE}-aca-quarkus-rg"
 export LOCATION="australiaeast"
-export ENVIRONMENT="env-dev-test-quarkus-health"
-export CONTAINER_APP_NAME="quarkus-health-1125"
-export REGISTRY_NAME="acrquarkusapp1125"
-export UAMI_NAME="uami-with-acr-pull"
+export ENVIRONMENT="${UNIQUE_VALUE}-env-dev-test-quarkus-health"
+export CONTAINER_APP_NAME="${UNIQUE_VALUE}-quarkus-health"
+export REGISTRY_NAME="${UNIQUE_VALUE}acrquarkusapp"
+export UAMI_NAME="${UNIQUE_VALUE}-uami-with-acr-pull"
 ```
 
 1. Create ACR
@@ -58,6 +59,7 @@ export UAMI_NAME="uami-with-acr-pull"
 
    ```bash
    export UAMI_CLIENT_ID=$(az identity show --name ${UAMI_NAME} --resource-group ${RESOURCE_GROUP} --query "clientId" --output tsv)
+   export UAMI_ID=$(az identity show --name ${UAMI_NAME} --resource-group ${RESOURCE_GROUP} --query "id" --output tsv)
    ```
 
    Assign the `AcrPull` Role.
@@ -74,11 +76,16 @@ export UAMI_NAME="uami-with-acr-pull"
    ## AZ CLI
 
    ```bash
+   cd deploy/yaml
+   bash gen-yaml-configuration.sh
+   ```
+
+   ```bash
    az containerapp create \
-    --name ${CONTAINER_APP_NAME} \
-    --environment $ENVIRONMENT \
-    --resource-group $RESOURCE_GROUP \
-    --yaml quarkus.yaml
+     --name ${CONTAINER_APP_NAME} \
+     --environment $ENVIRONMENT \
+     --resource-group $RESOURCE_GROUP \
+     --yaml quarkus.yaml
    ```
    
    ## Bicep
