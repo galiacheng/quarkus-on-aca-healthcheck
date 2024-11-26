@@ -1,4 +1,4 @@
-### Main Steps: Deploy a Quarkus App to Azure Container Apps Using ACR
+### Main Steps: Customize Health Probe for Quarkus App on Azure Container Apps
 
 #### 1. Set Environment Variables
 
