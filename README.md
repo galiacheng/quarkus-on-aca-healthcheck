@@ -27,9 +27,18 @@ export REGISTRY_NAME="${UNIQUE_VALUE}acrquarkusapp"
 
 1. Build image
 
+   Build traditional image:
+
    ```bash
    export QUARKUS_IMAGE_TAG=${LOGIN_SERVER}/quarkus-aca:1.0
    quarkus build -Dquarkus.container-image.build=true -Dquarkus.container-image.image=${QUARKUS_IMAGE_TAG} --no-tests
+   ```
+
+   Build native image:
+
+   ```bash
+   export QUARKUS_IMAGE_TAG=${LOGIN_SERVER}/quarkus-aca-native:1.0
+   ./mvnw package -Dnative -Dquarkus.native.container-build=true -Dquarkus.container-image.build=true
    ```
 
 1. Push image to ACR
@@ -100,7 +109,7 @@ export REGISTRY_NAME="${UNIQUE_VALUE}acrquarkusapp"
    ```
 
    ```bash
-   az deployment group create -g ${RESOURCE_GROUP} -f main.bicep -p containerImage=${QUARKUS_IMAGE_TAG} containerRegistry=${REGISTRY_NAME}
+   az deployment group create -g ${RESOURCE_GROUP} -f main.bicep -p acrImage=${QUARKUS_IMAGE_TAG} containerRegistry=${REGISTRY_NAME}
    ```
 
 1. Check health probe

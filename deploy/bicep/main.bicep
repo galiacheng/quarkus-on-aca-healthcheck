@@ -33,9 +33,9 @@ module uami 'uami.bicep' = {
 }
 
 module containerApp 'aca.bicep' = {
-  name: 'acr-${name}'
+  name: 'aca-${name}'
   params: {
-    name: 'acr-${name}'
+    name: 'aca-${name}'
     location: location
     containerAppEnvironmentId: containerAppEnvironment.outputs.id
     acrLoginServer: uami.outputs.acrLoginServer
