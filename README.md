@@ -1,6 +1,6 @@
-Main steps:
+### Main Steps: Deploy a Quarkus App to Azure Container Apps Using ACR
 
-Env variables:
+#### 1. Set Environment Variables
 
 ```bash
 export UNIQUE_VALUE=haiche1125
@@ -9,91 +9,88 @@ export LOCATION="australiaeast"
 export REGISTRY_NAME="${UNIQUE_VALUE}acrquarkusapp"
 ```
 
-1. Create ACR
+#### 2. Create Azure Container Registry (ACR)
 
+1. **Create a Resource Group**  
    ```bash
    az group create --name ${RESOURCE_GROUP} --location ${LOCATION}
    ```
 
-
+2. **Create the ACR**  
    ```bash
    az acr create --resource-group $RESOURCE_GROUP --location ${LOCATION} --name $REGISTRY_NAME --sku Basic
    ```
 
+3. **Get ACR Login Server**  
    ```bash
    export LOGIN_SERVER=$(az acr show --name $REGISTRY_NAME --query 'loginServer' --output tsv)
    echo $LOGIN_SERVER
    ```
 
-1. Build image
+#### 3. Build the Container Image
 
-   Build traditional image:
-
+- **Build Traditional Image**  
    ```bash
    export QUARKUS_IMAGE_TAG=${LOGIN_SERVER}/quarkus-aca:1.0
-   quarkus build -Dquarkus.container-image.build=true -Dquarkus.container-image.image=${QUARKUS_IMAGE_TAG} --no-tests
+   quarkus build -Dquarkus.container-image.build=true -Dquarkus.container-image.image=${QUARKUS_IMAGE_TAG}
    ```
 
-   Build native image:
-
+- **Build Native Image**  
    ```bash
    export QUARKUS_IMAGE_TAG=${LOGIN_SERVER}/quarkus-aca-native:1.0
-   ./mvnw package -Dnative -Dquarkus.native.container-build=true -Dquarkus.container-image.build=true
+   ./mvnw package -Dnative -Dquarkus.native.container-build=true -Dquarkus.container-image.build=true -Dquarkus.container-image.image=${QUARKUS_IMAGE_TAG}
    ```
 
-1. Push image to ACR
+#### 4. Push Image to ACR
 
+1. **Log in to ACR**  
    ```bash
    az acr login --name $REGISTRY_NAME
    ```
 
+2. **Push the Image**  
    ```bash
    docker push ${QUARKUS_IMAGE_TAG}
    ```
 
-1. Deploy Quarkus app to ACR
+#### 5. Deploy the Quarkus App
 
-   ## AZ CLI
+##### **Using Azure CLI**
 
-   Create container environment
-
+1. **Create a Container Environment**  
    ```bash
-   export ENVIRONMENT="${UNIQUE_VALUE}-env-dev-test-quarkus-health"   
-
+   export ENVIRONMENT="${UNIQUE_VALUE}-env-dev-test-quarkus-health"
    az containerapp env create --name $ENVIRONMENT --resource-group $RESOURCE_GROUP --location $LOCATION
    ```
 
-   Create a user assigned managed identity and grant AcrPull permission to the identity.
-
+2. **Create a User-Assigned Managed Identity**  
    ```bash
    export UAMI_NAME="${UNIQUE_VALUE}-uami-with-acr-pull"
    az identity create --name ${UAMI_NAME} --resource-group ${RESOURCE_GROUP}
    ```
 
+   Retrieve the Managed Identity IDs:  
    ```bash
    export UAMI_CLIENT_ID=$(az identity show --name ${UAMI_NAME} --resource-group ${RESOURCE_GROUP} --query "clientId" --output tsv)
    export UAMI_ID=$(az identity show --name ${UAMI_NAME} --resource-group ${RESOURCE_GROUP} --query "id" --output tsv)
    ```
 
-   Assign the `AcrPull` Role.
-
+3. **Grant `AcrPull` Permission**  
    ```bash
    export CONTAINER_APP_NAME="${UNIQUE_VALUE}-quarkus-health"
-   
    az role assignment create \
-    --assignee ${UAMI_CLIENT_ID} \
-    --role "AcrPull" \
-    --scope $(az acr show --name ${REGISTRY_NAME} --query id --output tsv)
+     --assignee ${UAMI_CLIENT_ID} \
+     --role "AcrPull" \
+     --scope $(az acr show --name ${REGISTRY_NAME} --query id --output tsv)
    ```
 
-   Generate Yaml configurtion.
-
+4. **Generate YAML Configuration**  
    ```bash
    cd deploy/yaml
    bash gen-yaml-configuration.sh
    ```
-   Create container app.
 
+5. **Create the Container App**  
    ```bash
    az containerapp create \
      --name ${CONTAINER_APP_NAME} \
@@ -101,17 +98,26 @@ export REGISTRY_NAME="${UNIQUE_VALUE}acrquarkusapp"
      --resource-group $RESOURCE_GROUP \
      --yaml quarkus.yaml
    ```
-   
-   ## Bicep
 
+##### **Using Bicep**
+
+1. Navigate to the Bicep Directory:  
    ```bash
    cd deploy/bicep
    ```
 
+2. Deploy Using Bicep:  
    ```bash
-   az deployment group create -g ${RESOURCE_GROUP} -f main.bicep -p acrImage=${QUARKUS_IMAGE_TAG} containerRegistry=${REGISTRY_NAME}
+   az deployment group create --resource-group ${RESOURCE_GROUP} --template-file main.bicep \
+     --parameters acrImage=${QUARKUS_IMAGE_TAG} containerRegistry=${REGISTRY_NAME}
    ```
 
-1. Check health probe
+#### 6. Verify Deployment
 
-1. Check App health
+1. **Check Health Probes**  
+   _Ensure proper configuration of liveness and readiness probes in your application._
+
+2. **Check App Logs**  
+   ```bash
+   az containerapp logs show --name ${CONTAINER_APP_NAME} --resource-group ${RESOURCE_GROUP}
+   ```
