@@ -115,7 +115,18 @@ export REGISTRY_NAME="${UNIQUE_VALUE}acrquarkusapp"
 #### 6. Verify Deployment
 
 1. **Check Health Probes**  
-   _Ensure proper configuration of liveness and readiness probes in your application._
+   Open the Azure portal, navigate to the container app you created, and go to **Containers** -> **Health Probes** to view the custom probe configuration.
+   
+   To test a negative case, set `database.up=false` in `resources/application.properties`, rebuild the app, and deploy it again. You will notice that the deployment fails as expected.
+
+   Command to update the image:
+
+   ```bash
+   az containerapp update \
+     --name <container app name> \
+     --resource-group $RESOURCE_GROUP \
+     --image <new image>
+   ```
 
 2. **Check App Logs**  
    ```bash
