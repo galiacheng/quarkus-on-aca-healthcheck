@@ -7,6 +7,9 @@ export UNIQUE_VALUE=haiche1125
 export RESOURCE_GROUP="${UNIQUE_VALUE}-aca-quarkus-rg"
 export LOCATION="australiaeast"
 export REGISTRY_NAME="${UNIQUE_VALUE}acrquarkusapp"
+export ENVIRONMENT="${UNIQUE_VALUE}-aca-env-quarkus-health"
+export UAMI_NAME="${UNIQUE_VALUE}-uami-quarkus-health"
+export CONTAINER_APP_NAME="${UNIQUE_VALUE}-aca-quarkus-health"
 ```
 
 #### 2. Create Azure Container Registry (ACR)
@@ -55,17 +58,15 @@ export REGISTRY_NAME="${UNIQUE_VALUE}acrquarkusapp"
 
 #### 5. Deploy the Quarkus App
 
-##### **Using Azure CLI**
+##### **YAML deployment**
 
 1. **Create a Container Environment**  
    ```bash
-   export ENVIRONMENT="${UNIQUE_VALUE}-env-dev-test-quarkus-health"
    az containerapp env create --name $ENVIRONMENT --resource-group $RESOURCE_GROUP --location $LOCATION
    ```
 
 2. **Create a User-Assigned Managed Identity**  
    ```bash
-   export UAMI_NAME="${UNIQUE_VALUE}-uami-with-acr-pull"
    az identity create --name ${UAMI_NAME} --resource-group ${RESOURCE_GROUP}
    ```
 
@@ -77,7 +78,6 @@ export REGISTRY_NAME="${UNIQUE_VALUE}acrquarkusapp"
 
 3. **Grant `AcrPull` Permission**  
    ```bash
-   export CONTAINER_APP_NAME="${UNIQUE_VALUE}-quarkus-health"
    az role assignment create \
      --assignee ${UAMI_CLIENT_ID} \
      --role "AcrPull" \
@@ -99,7 +99,7 @@ export REGISTRY_NAME="${UNIQUE_VALUE}acrquarkusapp"
      --yaml quarkus.yaml
    ```
 
-##### **Using Bicep**
+##### **Bicep deployment**
 
 1. Navigate to the Bicep Directory:  
    ```bash
@@ -109,7 +109,7 @@ export REGISTRY_NAME="${UNIQUE_VALUE}acrquarkusapp"
 2. Deploy Using Bicep:  
    ```bash
    az deployment group create --resource-group ${RESOURCE_GROUP} --template-file main.bicep \
-     --parameters acrImage=${QUARKUS_IMAGE_TAG} containerRegistry=${REGISTRY_NAME}
+     --parameters acrImage=${QUARKUS_IMAGE_TAG} containerRegistry=${REGISTRY_NAME} name=${UNIQUE_VALUE}
    ```
 
 #### 6. Verify Deployment
@@ -123,12 +123,61 @@ export REGISTRY_NAME="${UNIQUE_VALUE}acrquarkusapp"
 
    ```bash
    az containerapp update \
-     --name <container app name> \
+     --name ${CONTAINER_APP_NAME} \
      --resource-group $RESOURCE_GROUP \
-     --image <new image>
+     --image ${QUARKUS_IMAGE_TAG}
    ```
 
 2. **Check App Logs**  
    ```bash
    az containerapp logs show --name ${CONTAINER_APP_NAME} --resource-group ${RESOURCE_GROUP}
    ```
+
+3. **Access App**
+
+   Command to query the URL:
+
+   ```bash
+   export CONTAINERAPP_URL=$(az containerapp show \
+      --name ${CONTAINER_APP_NAME} \
+      --resource-group ${RESOURCE_GROUP} \
+      --query 'properties.configuration.ingress.fqdn' -otsv)
+
+   echo "App URL: http://${CONTAINERAPP_URL}"
+   echo "Health: http://${CONTAINERAPP_URL}/q/health"
+   ```
+
+   Access the test REST via `http://${CONTAINERAPP_URL}`, you will get a message saying "Hello, RESTEasy".
+
+   Validate the health via `http://${CONTAINERAPP_URL}/q/health`, you will get status as:
+
+   ```json
+   {
+      "status": "UP",
+      "checks": [
+         {
+               "name": "Health check with data",
+               "status": "UP",
+               "data": {
+                  "foo": "fooValue",
+                  "bar": "barValue"
+               }
+         },
+         {
+               "name": "Simple health check",
+               "status": "UP"
+         },
+         {
+               "name": "Database connection health check",
+               "status": "UP"
+         },
+         {
+               "name": "Startup health check",
+               "status": "UP"
+         }
+      ]
+   }
+   ```
+
+
+
